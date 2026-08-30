@@ -1,0 +1,77 @@
+# oknek — example config for a self-hosted install. Copy to /etc/oknek/oknek.yaml.
+# Everything below is OBSERVE-first: nothing is denied until you flip an `enforce`.
+# R3 (credential reads), R13–R20 (memory, persistence, escalation, backdoor,
+# self-defense) are always on for watched agents and need no config.
+
+# Tamper-proof audit ledger (hash-chained, ed25519-signed, anchored every 60s).
+okular:
+  enabled: true
+
+# R11 egress jail: a watched agent (and every child) may reach only the gateway,
+# DNS to your resolvers, and loopback-to-gateway — everything else -EPERM.
+# Point gateway at your LLM proxy (LiteLLM, Cloudflare AI Gateway, …).
+egress_jail:
+  enabled: true
+  gateway: { host: "127.0.0.1", port: 4000 }
+  enforce: false           # observe: log what would be blocked; then set true
+
+# R12 exfil/C2 watch (beaconing + connect velocity over R11's stream). Alert-only.
+exfil_watch:
+  enabled: true
+
+# R3 inode protection — files matched by (dev, ino): hardlink/rename/bind-mount proof.
+protected_files:
+  - /etc/oknek/oknek.yaml
+
+# Okredo: per-agent identity -> authorization. Bind with `oknek run --profile dev`.
+# Grants are "ip:port" or "cidr:port" (byte-aligned /8 /16 /24 /32), additive to the jail.
+okredo:
+  enabled: true
+  profiles:
+    dev:
+      allow_egress: ["140.82.112.0/24:443"]   # github.com
+      rule_of_two: observe                     # R21: off | observe | enforce
+
+# R21 Rule of Two — what counts as untrusted input (U) and private data (P).
+# X (external comms) = any identity-granted non-gateway connect.
+rule_of_two:
+  network_trusted: false    # false: a granted connect is U+X (after private data, no external comms)
+  untrusted_dirs: ["/workspace"]
+  private_files: []
+
+# R22 supply-chain pins: `oknek pin` hashes skills/hooks/settings/MCP manifests;
+# in-place writes denied in-kernel, tampered files quarantined until `oknek pin --accept`.
+pins:
+  enabled: true
+  enforce: false            # observe: alert on tamper, deny nothing
+  sweep_seconds: 30
+  # paths: default = ~/.claude/settings.json ~/.claude.json .claude/settings.json
+  #        .claude/skills/** .claude/hooks/** .mcp.json .cursor/mcp.json .cursor/rules/**
+
+# R23 canary credentials: `oknek canary plant` drops decoys ONLY where no real file exists.
+canary:
+  enabled: true
+  mode: alert               # alert | block
+  plant: ["~/.aws/credentials", "~/.ssh/id_rsa_old", "~/.env.backup"]
+
+# R24 MCP server jail: each stdio MCP server declared in .mcp.json / ~/.claude.json /
+# .cursor/mcp.json gets its own kernel identity with these grants.
+mcp:
+  enabled: true
+  enforce: false            # observe: `oknek mcp` shows what each server reached
+  grants:
+    github: ["140.82.112.0/24:443"]
+
+# Okredo Attest: kernel-attested agent identity (EdDSA JWT, 5 min) pushed to your IdP/SIEM.
+identity:
+  enabled: false
+  webhook_url: ""           # e.g. https://idp.example.com/oknek
+  headers: {}               # e.g. { Authorization: "Bearer …" }
+  interval_seconds: 120
+  ttl_seconds: 300
+
+# R20 anti-unpin self-guard: root cannot rm/mv/umount oknek's own bpffs pins.
+# Irreversible without a reboot once enforce=true — read THREAT-MODEL.md first.
+self_guard:
+  enabled: false
+  enforce: false

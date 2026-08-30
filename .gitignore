@@ -1,0 +1,38 @@
+# Build output
+bin/
+dist/
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Concierge install bundles — scripts/make-bundle.sh stamps a LIVE per-customer
+# okik_ ingest key into bundle/oknek.yaml. Never commit a generated bundle.
+bundle/
+
+# Go
+vendor/
+*.test
+*.out
+coverage.txt
+coverage.html
+go.work.sum
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*~
+.DS_Store
+
+# Logs
+*.log
+
+# Local artifacts
+.local/
+tmp/

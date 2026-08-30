@@ -1,0 +1,12 @@
+# oknek daemon config — per-customer concierge install.
+# The dashboard feed streams every block/warn to the customer's /app dashboard.
+feed:
+  enabled: true
+  url: https://oknek.com/api/events/ingest
+  key: __OKNEK_INGEST_KEY__   # replaced by scripts/make-bundle.sh with the customer's okik_ key
+
+# Tamper-proof audit ledger. REQUIRED for Dean's approve→apply config-pull:
+# the daemon seals every approved policy change into this hash-chained ledger
+# before it applies it (record-first, fail-closed). Also seals enforcement events.
+okular:
+  enabled: true

@@ -1,0 +1,33 @@
+[Unit]
+Description=oknek runtime defense daemon for AI agents
+Documentation=https://oknek.com/docs/
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/oknekd
+Restart=on-failure
+RestartSec=2
+
+# Runtime/state/log dirs (auto-created, owned by the service, read-write).
+RuntimeDirectory=oknek
+RuntimeDirectoryMode=0750
+StateDirectory=oknek
+LogsDirectory=oknek
+
+# eBPF BPF-LSM enforcement needs to load programs + raise the memlock rlimit.
+LimitMEMLOCK=infinity
+AmbientCapabilities=CAP_BPF CAP_SYS_ADMIN CAP_PERFMON
+
+# Hardening — the daemon writes only its SQLite store + log; everything else is
+# read-only / denied. (ProtectKernelTunables is left off so BPF loading is clean.)
+NoNewPrivileges=false
+ProtectSystem=strict
+ProtectHome=read-only
+PrivateTmp=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+LockPersonality=true
+
+[Install]
+WantedBy=multi-user.target
