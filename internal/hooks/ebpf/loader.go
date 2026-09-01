@@ -323,16 +323,27 @@ func Start(
 // RegisterPID marks a process (and its same-PID exec target) as a watched agent
 // so the kernel hook enforces on it. Called from hook.attach.
 func (l *Loader) RegisterPID(pid uint32, agent string) error {
+	if l == nil {
+		return nil
+	}
 	var v [agentLen]byte
 	copy(v[:], agent)
 	return l.pids.Put(pid, v)
 }
 
 // UnregisterPID stops enforcing on a PID.
-func (l *Loader) UnregisterPID(pid uint32) error { return l.pids.Delete(pid) }
+func (l *Loader) UnregisterPID(pid uint32) error {
+	if l == nil {
+		return nil
+	}
+	return l.pids.Delete(pid)
+}
 
 // Close detaches the program and frees maps.
 func (l *Loader) Close() error {
+	if l == nil {
+		return nil
+	}
 	if l.reader != nil {
 		l.reader.Close()
 	}
@@ -388,6 +399,9 @@ func (l *Loader) Close() error {
 // and enforce=true, watched agents (and their process tree) may only reach the
 // gateway, DNS (if allowDNS), and loopback; all other egress is blocked.
 func (l *Loader) SetEgressPolicy(gw net.IP, gwPort int, allowDNS, enforce bool, resolvers []net.IP) error {
+	if l == nil {
+		return nil
+	}
 	var key uint32 = 0
 	p := buildEgressPolicy(gw, gwPort, allowDNS, enforce, resolvers)
 	if err := l.egress.Put(key, p); err != nil {
@@ -410,6 +424,9 @@ type inodeKey struct {
 // AddProtectedInode marks a file (by device + inode) as credential-protected, so
 // R3 blocks it even when opened via a hardlink, rename, or bind-mount (same inode).
 func (l *Loader) AddProtectedInode(dev uint32, ino uint64) error {
+	if l == nil {
+		return nil
+	}
 	if l.inodes == nil {
 		return nil
 	}
@@ -427,6 +444,9 @@ type allowKey struct {
 // SetAgentPolicy binds a watched agent (by global pid) to an Okredo policy id, so
 // the kernel applies that identity's per-agent egress allowlist.
 func (l *Loader) SetAgentPolicy(pid uint32, policyID uint16) error {
+	if l == nil {
+		return nil
+	}
 	if l.policy == nil || policyID == 0 {
 		return nil
 	}
@@ -436,6 +456,9 @@ func (l *Loader) SetAgentPolicy(pid uint32, policyID uint16) error {
 // AddEgressAllow authorizes a policy/identity to reach a specific dest IPv4:port,
 // additive to the base egress jail.
 func (l *Loader) AddEgressAllow(policyID uint16, ip net.IP, port uint16) error {
+	if l == nil {
+		return nil
+	}
 	if l.egressAllow == nil {
 		return nil
 	}
@@ -465,6 +488,9 @@ type cidrEntry struct {
 // exec triggers a spurious leader-exit that would wipe a live policy), and a present
 // /proc/<pid> is the unambiguous "still alive" signal.
 func (l *Loader) ReapDeadPolicies() int {
+	if l == nil {
+		return 0
+	}
 	if l.policy == nil {
 		return 0
 	}
@@ -486,6 +512,9 @@ func (l *Loader) ReapDeadPolicies() int {
 // AddEgressCIDR authorizes a policy/identity to reach a byte-aligned IPv4 range
 // (nbytes = significant octets: 1=/8, 2=/16, 3=/24, 4=/32). port 0 = any port.
 func (l *Loader) AddEgressCIDR(policyID uint16, ip net.IP, nbytes uint8, port uint16) error {
+	if l == nil {
+		return nil
+	}
 	if l.egressCIDR == nil {
 		return nil
 	}
@@ -802,26 +831,41 @@ func (l *Loader) delInode(m *ebpf.Map, dev uint32, ino uint64) error {
 
 // AddPinnedInode marks a supply-chain artifact: a watched agent may not open it for WRITE.
 func (l *Loader) AddPinnedInode(dev uint32, ino uint64) error {
+	if l == nil {
+		return nil
+	}
 	return l.putInode(l.pinned, dev, ino, 1)
 }
 
 // RemovePinnedInode drops a pin (file re-pinned at a new inode, or forgotten).
 func (l *Loader) RemovePinnedInode(dev uint32, ino uint64) error {
+	if l == nil {
+		return nil
+	}
 	return l.delInode(l.pinned, dev, ino)
 }
 
 // AddQuarantineInode marks a TAMPERED artifact: a watched agent may not open or exec it.
 func (l *Loader) AddQuarantineInode(dev uint32, ino uint64) error {
+	if l == nil {
+		return nil
+	}
 	return l.putInode(l.quarantine, dev, ino, 1)
 }
 
 // RemoveQuarantineInode releases a quarantine (human re-pinned via `oknek pin --accept`).
 func (l *Loader) RemoveQuarantineInode(dev uint32, ino uint64) error {
+	if l == nil {
+		return nil
+	}
 	return l.delInode(l.quarantine, dev, ino)
 }
 
 // AddCanaryInode marks a planted decoy: watched open -> alert (block=false) or EPERM (block=true).
 func (l *Loader) AddCanaryInode(dev uint32, ino uint64, block bool) error {
+	if l == nil {
+		return nil
+	}
 	var v uint8 = 1
 	if block {
 		v = 2
@@ -831,6 +875,9 @@ func (l *Loader) AddCanaryInode(dev uint32, ino uint64, block bool) error {
 
 // RemoveCanaryInode forgets a decoy.
 func (l *Loader) RemoveCanaryInode(dev uint32, ino uint64) error {
+	if l == nil {
+		return nil
+	}
 	return l.delInode(l.canary, dev, ino)
 }
 

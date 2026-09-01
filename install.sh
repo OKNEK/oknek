@@ -25,7 +25,14 @@ REPO="oknek/oknek"
 # to the working directory so mode 2 still finds assets sitting next to you.
 case "${0:-}" in
 	-|sh|bash|/dev/fd/*|/proc/self/fd/*) SRCDIR="$(pwd)" ;;
-	*) SRCDIR="$(cd "$(dirname "$0")" 2>/dev/null && pwd || pwd)" ;;
+	*)
+		# Not `A && B || C` — that runs C when B fails too (shellcheck SC2015).
+		if _sd=$(cd "$(dirname "$0")" 2>/dev/null && pwd); then
+			SRCDIR="$_sd"
+		else
+			SRCDIR="$(pwd)"
+		fi
+		;;
 esac
 
 die() { echo "oknek: $*" >&2; exit 1; }
