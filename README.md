@@ -21,26 +21,37 @@ Runs in production on our own hosts since May 2026 (Ubuntu 24.04, kernel 6.8). A
 
 ## Quickstart (5 minutes, Linux)
 
-**Requirements:** Linux ≥ 5.8 with the `bpf` LSM active, Go ≥ 1.22, a C compiler (for the userspace shim). Ubuntu 24.04 ships everything.
+**Requirements:** Linux ≥ 5.8 with the `bpf` LSM active. To build from source you
+also need Go ≥ 1.25 (see `go.mod`) and a C compiler for the shim — note that
+Ubuntu 24.04's `golang-go` is 1.22, so use the official tarball or install the
+prebuilt binaries below.
 
 ```sh
 # 1. is BPF-LSM on?  (must list "bpf")
 cat /sys/kernel/security/lsm
 #    if not: add bpf to GRUB_CMDLINE_LINUX in /etc/default/grub, e.g.
 #    lsm=lockdown,capability,landlock,yama,apparmor,bpf   → update-grub → reboot
+```
 
-# 2. build
+**2a. Install the release** (linux/amd64, SHA-256 verified against the release
+`SHA256SUMS`; refuses to install on mismatch). It never overwrites an existing
+`/etc/oknek/oknek.yaml`:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/oknek/oknek/main/install.sh | sudo sh
+```
+
+**2b. Or build from source:**
+
+```sh
 git clone https://github.com/oknek/oknek && cd oknek
 make build          # bin/oknekd  bin/oknek     (the BPF object is prebuilt + embedded)
 make shim-linux     # dist/liboknek_preload.so  (userspace fallback / hostname attribution)
+sudo sh install.sh  # picks up bin/ + dist/ + systemd/ + deploy/ from the checkout
+```
 
-# 3. install + start
-sudo install -m0755 bin/oknekd bin/oknek /usr/local/bin/
-sudo install -d /usr/local/lib/oknek && sudo install -m0644 dist/liboknek_preload.so /usr/local/lib/oknek/
-sudo install -d /etc/oknek && sudo cp deploy/oknek.oss.yaml /etc/oknek/oknek.yaml
-sudo install -m0644 systemd/oknekd.service /etc/systemd/system/ && sudo systemctl enable --now oknekd
-
-# 4. prove it
+```sh
+# 3. prove it
 oknek doctor                                   # want: 🟢 KERNEL-ENFORCED, 14/14 links pinned
 oknek run --agent test -- cat ~/.aws/credentials   # want: Operation not permitted
 oknek replay test                              # the block, sealed
@@ -110,7 +121,7 @@ Every kernel rule ships with an e2e script under `tests/e2e/` that runs an isola
 
 ## Security
 
-To report a vulnerability, email `security@oknek.com`. We acknowledge within 48 hours, triage within 5 business days, and ship a fix within 30 days for high-severity findings. See `/.well-known/security.txt` on oknek.com.
+Report privately: [open a security advisory](https://github.com/oknek/oknek/security/advisories/new) or email `security@oknek.com`. We acknowledge within 48 hours, triage within 5 business days, and ship a fix within 30 days for high-severity findings. Scope, out-of-scope and the disclosure clock are in [`SECURITY.md`](./SECURITY.md); also `/.well-known/security.txt` on oknek.com.
 
 ## Links
 

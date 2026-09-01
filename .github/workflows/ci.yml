@@ -1,0 +1,77 @@
+name: ci
+
+# Complements release-gate.yml, which owns `go test -race` + `go vet` (the
+# fail-closed-verifier and terminal-silence tripwires). This one covers what
+# that gate does not: that the thing actually BUILDS and INSTALLS, that the
+# embedded BPF object is still there, and that the public tree stays clean.
+# Deliberately no duplicate test run — the gate is the required check.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: ['**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: build (linux/amd64)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: build daemon + CLI
+        run: make build
+
+      - name: build LD_PRELOAD shim
+        run: make shim-linux
+
+      # The BPF object is committed and go:embed'd so the build needs no clang.
+      # If it ever goes missing the daemon still builds but silently loses
+      # kernel enforcement, so fail here rather than ship a DEGRADED binary.
+      - name: embedded BPF object present
+        run: test -s internal/hooks/ebpf/oknek_lsm.o
+
+      - name: binaries run
+        run: |
+          ./bin/oknekd --version
+          ./bin/oknek --version
+          test -s dist/liboknek_preload.so
+
+  cross:
+    name: cross-compile linux/arm64
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - run: GOOS=linux GOARCH=arm64 go build ./...
+
+  installer:
+    name: installer lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: POSIX syntax
+        run: sh -n install.sh
+      - name: shellcheck
+        run: shellcheck -s sh install.sh
+
+  export-gate:
+    name: public-export secrets gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Re-runs the allowlist + secrets gate used to publish this tree. Red here
+      # means something now publishable contains internal material.
+      - name: export-public.sh
+        run: bash scripts/export-public.sh "$RUNNER_TEMP/export-check"

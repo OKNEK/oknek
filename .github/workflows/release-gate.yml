@@ -1,0 +1,39 @@
+name: release-gate
+
+# The anti-false-green gate. The 19-bug review found that almost every bug was a
+# SUCCESS PATH THAT LIED (a verifier that returned "all clear" on a deleted row, an
+# attest that reported CONTINUOUS for a dead box). A snapshot scorecard does not stop
+# the next false-green; THIS does. Tripwires 1 & 2 (fail-closed verifier, terminal-
+# silence attest) are pure Go and run here on every PR — a regression that re-hollows
+# either guarantee turns the check red and blocks merge.
+#
+# Tripwire 3 (the three-action disable/scrub/route-around drill) needs a real BPF-LSM
+# kernel and CANNOT run on a hosted runner — it is gated by the manual checklist in
+# results/RELEASE-GATING.md (or a self-hosted bpf-lsm runner). That HW gap is stated
+# honestly in that file; do not pretend this workflow covers it.
+
+on:
+  pull_request:
+    branches: ['**']
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  unit-tripwires:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      # Whole suite, race + no-cache so a stale pass can't sneak through. The two
+      # release-gating tests are inside it and a failure here fails the required check:
+      #   internal/okular  TestVerifyRemoteCatchesLedgerDelete   (delete-below-head => TAMPER)
+      #   internal/attest  TestSinceNewest*                      (dead box => SILENCE, never CONTINUOUS)
+      - name: go test (includes fail-closed-verifier + terminal-silence tripwires)
+        run: go test -race -count=1 ./...
+      - name: go vet
+        run: go vet ./...

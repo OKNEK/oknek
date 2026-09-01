@@ -11,7 +11,8 @@ rsync -a --prune-empty-dirs \
   --include='systemd/***' --include='deploy/***' --include='tests/***' \
   --include='scripts/***' --include='docs/' --include='docs/public/***' \
   --include='install.sh' --include='Makefile' --include='go.mod' --include='go.sum' \
-  --include='LICENSE' --include='README.md' --include='.gitignore' \
+  --include='LICENSE' --include='README.md' --include='SECURITY.md' --include='.gitignore' \
+  --include='.github/' --include='.github/workflows/***' \
   --exclude='*' "$SRC/" "$DEST/"
 # denylist — never ship internal material or built artifacts (the compiled BPF
 # object internal/hooks/ebpf/oknek_lsm.o is KEPT: go:embed needs it)
