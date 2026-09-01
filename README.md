@@ -1,5 +1,9 @@
 # oknek
 
+[![ci](https://github.com/oknek/oknek/actions/workflows/ci.yml/badge.svg)](https://github.com/oknek/oknek/actions/workflows/ci.yml)
+[![release-gate](https://github.com/oknek/oknek/actions/workflows/release-gate.yml/badge.svg)](https://github.com/oknek/oknek/actions/workflows/release-gate.yml)
+[![license](https://img.shields.io/badge/license-AGPL--3.0-blue)](./LICENSE)
+
 > **Rogue agents can't escape the kernel.**
 > Runtime security for AI agents, enforced below the agent with BPF-LSM — plus an audit even root can't scrub.
 
